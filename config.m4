@@ -7,9 +7,9 @@ dnl without editing.
 
 dnl If your extension references something external, use with:
 
-dnl PHP_ARG_WITH(extdemo, for extdemo support,
+PHP_ARG_WITH(extdemo, for extdemo support,
 dnl Make sure that the comment is aligned:
-dnl [  --with-extdemo             Include extdemo support])
+[  --with-extdemo             Include extdemo support])
 
 dnl Otherwise use enable:
 
