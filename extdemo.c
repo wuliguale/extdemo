@@ -27,6 +27,9 @@
 #include "ext/standard/info.h"
 #include "php_extdemo.h"
 
+
+PHP_FUNCTION(test);
+
 /* If you declare any globals in php_extdemo.h uncomment this:
 ZEND_DECLARE_MODULE_GLOBALS(extdemo)
 */
@@ -143,6 +146,7 @@ PHP_MINFO_FUNCTION(extdemo)
  */
 const zend_function_entry extdemo_functions[] = {
 	PHP_FE(confirm_extdemo_compiled,	NULL)		/* For testing, remove later. */
+	PHP_FE(test, NULL)
 	PHP_FE_END	/* Must be the last line in extdemo_functions[] */
 };
 /* }}} */
@@ -175,3 +179,10 @@ ZEND_GET_MODULE(extdemo)
  * vim600: noet sw=4 ts=4 fdm=marker
  * vim<600: noet sw=4 ts=4
  */
+
+
+PHP_FUNCTION(test)
+{
+	php_printf("hello world\n");
+
+}
