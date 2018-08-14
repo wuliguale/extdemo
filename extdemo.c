@@ -28,7 +28,7 @@
 #include "php_extdemo.h"
 
 
-PHP_FUNCTION(test);
+PHP_FUNCTION(extdemotest);
 
 /* If you declare any globals in php_extdemo.h uncomment this:
 ZEND_DECLARE_MODULE_GLOBALS(extdemo)
@@ -146,7 +146,7 @@ PHP_MINFO_FUNCTION(extdemo)
  */
 const zend_function_entry extdemo_functions[] = {
 	PHP_FE(confirm_extdemo_compiled,	NULL)		/* For testing, remove later. */
-	PHP_FE(test, NULL)
+	PHP_FE(extdemotest, NULL)
 	PHP_FE_END	/* Must be the last line in extdemo_functions[] */
 };
 /* }}} */
@@ -181,7 +181,7 @@ ZEND_GET_MODULE(extdemo)
  */
 
 
-PHP_FUNCTION(test)
+PHP_FUNCTION(extdemotest)
 {
 	php_printf("hello world\n");
 
