@@ -6,4 +6,5 @@
  *      Author: sam
  */
 
+#include "base_object_pool_config.h"
 
