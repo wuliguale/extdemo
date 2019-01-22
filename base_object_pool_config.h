@@ -36,7 +36,42 @@ char *base_object_pool_config_default_eviction_policy_class_name = "org.apache.c
 
 zend_class_entry *base_object_pool_config_ce;
 
+PHP_METHOD(base_object_pool_config, getLifo);
+PHP_METHOD(base_object_pool_config, setLifo);
+
+
 zend_function_entry base_object_pool_config_method[] = {
+		PHP_ME(base_object_pool_config, getLifo, NULL, ZEND_ACC_PUBLIC)
+		PHP_ME(base_object_pool_config, setLifo, NULL, ZEND_ACC_PUBLIC)
 	    PHP_FE_END
 };
+
+
+PHP_METHOD(base_object_pool_config, getLifo)
+{
+	zval *ret;
+	ret = zend_read_property(base_object_pool_config_ce, getThis(), "lifo", strlen("lifo"), 0 TSRMLS_DC);
+	RETURN_ZVAL(ret, 1, 0);
+}
+
+
+PHP_METHOD(base_object_pool_config, setLifo)
+{
+	zend_bool lifo;
+	long lifo_long;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "b", &lifo) == FAILURE) {
+		RETURN_NULL();
+	}
+
+	if (lifo) {
+		lifo_long = 1;
+	} else {
+		lifo_long = 0;
+	}
+
+	zend_update_property_bool(base_object_pool_config_ce, getThis(), "lifo", strlen("lifo"), lifo_long TSRMLS_DC);
+}
+
+
+
 
