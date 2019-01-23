@@ -27,7 +27,7 @@
 #include "ext/standard/info.h"
 #include "php_extdemo.h"
 #include "base_object_pool_config.h"
-
+#include "generic_object_pool_config.c"
 
 
 
@@ -154,8 +154,17 @@ PHP_MINIT_FUNCTION(extdemo)
 	zend_declare_property_string(base_object_pool_config_ce, "evictionPolicyClassName", strlen("evictionPolicyClassName"), base_object_pool_config_default_eviction_policy_class_name, ZEND_ACC_PRIVATE);
 
 
+	REGISTER_LONG_CONSTANT("DEFAULT_MAX_TOTAL", generic_object_pool_config_default_max_total, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("DEFAULT_MAX_IDLE", generic_object_pool_config_default_max_idle, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("DEFAULT_MIN_IDLE", generic_object_pool_config_default_min_idle, CONST_CS | CONST_PERSISTENT);
 
+	zend_class_entry generic_ce;
+	INIT_CLASS_ENTRY(generic_ce, "GenericObjectPoolConfig", generic_object_pool_config_method);
+	generic_object_pool_config_ce = zend_register_internal_class_ex(&generic_ce, base_object_pool_config_ce, "base_object_pool_config" TSRMLS_CC);
 
+	zend_declare_property_long(generic_object_pool_config_ce, "maxTotal", strlen("maxTotal"), generic_object_pool_config_default_max_total, ZEND_ACC_PRIVATE);
+	zend_declare_property_long(generic_object_pool_config_ce, "maxIdle", strlen("maxIdle"), generic_object_pool_config_default_max_idle, ZEND_ACC_PRIVATE);
+	zend_declare_property_long(generic_object_pool_config_ce, "minIdle", strlen("minIdle"), generic_object_pool_config_default_min_idle, ZEND_ACC_PRIVATE);
 
 
 	return SUCCESS;
