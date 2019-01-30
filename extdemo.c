@@ -176,7 +176,7 @@ PHP_MINIT_FUNCTION(extdemo)
 	zend_class_entry pooled_obj_ce;
 	INIT_CLASS_ENTRY(pooled_obj_ce, "PooledObject", pooled_object_method);
 	pooled_object_ce = zend_register_internal_interface(&pooled_obj_ce TSRMLS_CC);
-
+	zend_class_implements(pooled_object_ce TSRMLS_CC, 1, comparable_ce);
 
 	//PooledObjectState enum
 	REGISTER_LONG_CONSTANT("POOLED_OBJECT_STATE_IDLE", pooled_object_state_idle, CONST_CS | CONST_PERSISTENT);
@@ -190,32 +190,7 @@ PHP_MINIT_FUNCTION(extdemo)
 	REGISTER_LONG_CONSTANT("POOLED_OBJECT_STATE_ABANDONED", pooled_object_state_abandoned, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("POOLED_OBJECT_STATE_RETURNING", pooled_object_state_returning, CONST_CS | CONST_PERSISTENT);
 
-	//class DefaultPooledObject
-	zend_class_entry default_pooled_obj_ce;
-	INIT_CLASS_ENTRY(default_pooled_obj_ce, "DefaultPooledObject", default_pooled_object_method);
-	default_pooled_object_ce = zend_register_internal_class(&default_pooled_obj_ce TSRMLS_CC);
-
-	zend_declare_property_null(default_pooled_object_ce, "object", strlen("object"), ZEND_ACC_PRIVATE);
-	zend_declare_property_long(default_pooled_object_ce, "state", strlen("state"), pooled_object_state_idle, ZEND_ACC_PRIVATE);
-	long create_time = get_time_mills();
-	//TODO volatile
-	zend_declare_property_long(default_pooled_object_ce, "createTime", strlen("createTime"), create_time, ZEND_ACC_PRIVATE);
-	//TODO volatile
-	zend_declare_property_long(default_pooled_object_ce, "lastBorrowTime", strlen("lastBorrowTime"), create_time, ZEND_ACC_PRIVATE);
-	//TODO volatile
-	zend_declare_property_long(default_pooled_object_ce, "lastUseTime", strlen("lastUseTime"), create_time, ZEND_ACC_PRIVATE);
-	//TODO volatile
-	zend_declare_property_long(default_pooled_object_ce, "lastReturnTime", strlen("lastReturnTime"), create_time, ZEND_ACC_PRIVATE);
-	//TODO volatile
-	zend_declare_property_bool(default_pooled_object_ce, "logAbandoned", strlen("logAbandoned"), 0, ZEND_ACC_PRIVATE);
-	//TODO volatile
-	zend_declare_property_null(default_pooled_object_ce, "borrowedBy", strlen("borrowedBy"), ZEND_ACC_PRIVATE);
-	//TODO volatile
-	zend_declare_property_null(default_pooled_object_ce, "usedBy", strlen("usedBy"), ZEND_ACC_PRIVATE);
-	//TODO volatile
-	zend_declare_property_long(default_pooled_object_ce, "borrowedCount", strlen("borrowedCount"), 0, ZEND_ACC_PRIVATE);
-
-
+	EXTDEMO_STARTUP(DefaultPooledObject);
 	return SUCCESS;
 }
 /* }}} */

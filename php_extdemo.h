@@ -38,6 +38,8 @@ extern zend_module_entry extdemo_module_entry;
 #include "TSRM.h"
 #endif
 
+#define EXTDEMO_STARTUP(module)	 		  	ZEND_MODULE_STARTUP_N(extdemo_##module)(INIT_FUNC_ARGS_PASSTHRU)
+#define EXTDEMO_STARTUP_FUNCTION(module)   	ZEND_MINIT_FUNCTION(extdemo_##module)
 /* 
   	Declare any global variables you may need between the BEGIN
 	and END macros here:     
