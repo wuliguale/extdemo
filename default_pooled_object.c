@@ -52,38 +52,38 @@ zend_function_entry pooled_object_method[] = {
 //idle
 long pooled_object_state_idle = 1;
 //In use
-long pooled_object_state_allocated = 1;
+long pooled_object_state_allocated = 2;
 //In the queue, currently being tested for possible eviction
-long pooled_object_state_eviction = 1;
+long pooled_object_state_eviction = 3;
 /**
  * Not in the queue, currently being tested for possible eviction. An
  * attempt to borrow the object was made while being tested which removed it
  * from the queue. It should be returned to the head of the queue once
  * eviction testing completes.
  */
-long pooled_object_state_eviction_return_to_head = 1;
+long pooled_object_state_eviction_return_to_head = 4;
 //In the queue, currently being validated.
-long pooled_object_state_validation = 1;
+long pooled_object_state_validation = 5;
 /**
  * Not in queue, currently being validated. The object was borrowed while
  * being validated and since testOnBorrow was configured, it was removed
  * from the queue and pre-allocated. It should be allocated once validation
  * completes.
  */
-long pooled_object_state_validation_preallocated = 1;
+long pooled_object_state_validation_preallocated = 6;
 /**
  * Not in queue, currently being validated. An attempt to borrow the object
  * was made while previously being tested for eviction which removed it from
  * the queue. It should be returned to the head of the queue once validation
  * completes.
  */
-long pooled_object_state_validation_return_to_head = 1;
+long pooled_object_state_validation_return_to_head = 7;
 //Failed maintenance (e.g. eviction test or validation) and will be / has been destroyed
-long pooled_object_state_invalid = 1;
+long pooled_object_state_invalid = 8;
 //Deemed abandoned, to be invalidated.
-long pooled_object_state_abandoned = 1;
+long pooled_object_state_abandoned = 9;
 //Returning to the pool
-long pooled_object_state_returning = 1;
+long pooled_object_state_returning = 10;
 
 
 //class DefaultPooledObject
@@ -110,7 +110,7 @@ PHP_METHOD(DefaultPooledObject, endEvictionTest);
 PHP_METHOD(DefaultPooledObject, allocate);
 PHP_METHOD(DefaultPooledObject, deallocate);
 PHP_METHOD(DefaultPooledObject, invalidate);
-PHP_METHOD(DefaultPooledObject, use);
+PHP_METHOD(DefaultPooledObject, use1);
 PHP_METHOD(DefaultPooledObject, printStackTrace);
 PHP_METHOD(DefaultPooledObject, getState);
 PHP_METHOD(DefaultPooledObject, markAbandoned);
@@ -137,7 +137,7 @@ zend_function_entry default_pooled_object_method[] = {
 		PHP_ME(DefaultPooledObject, allocate, NULL, ZEND_ACC_PUBLIC)
 		PHP_ME(DefaultPooledObject, deallocate, NULL, ZEND_ACC_PUBLIC)
 		PHP_ME(DefaultPooledObject, invalidate, NULL, ZEND_ACC_PUBLIC)
-		PHP_ME(DefaultPooledObject, use, NULL, ZEND_ACC_PUBLIC)
+		PHP_ME(DefaultPooledObject, use1, NULL, ZEND_ACC_PUBLIC)
 		PHP_ME(DefaultPooledObject, printStackTrace, NULL, ZEND_ACC_PUBLIC)
 		PHP_ME(DefaultPooledObject, getState, NULL, ZEND_ACC_PUBLIC)
 		PHP_ME(DefaultPooledObject, markAbandoned, NULL, ZEND_ACC_PUBLIC)
@@ -303,9 +303,8 @@ PHP_METHOD(DefaultPooledObject, compareTo)
 	otherLastReturnTime = Z_LVAL_P(other_last_return_time);
 
 	lastActiveDiff = thisLastReturnTime- otherLastReturnTime;
-	php_printf("%d, %d\n", thisLastReturnTime, otherLastReturnTime);
-
 	//TODO check lastActiveDiff == 0
+	//TODO time long max check
 	RETURN_LONG(lastActiveDiff);
 }
 
@@ -341,135 +340,105 @@ PHP_METHOD(DefaultPooledObject, toString)
     }
     */
 
+
+//TODO synchronized
 PHP_METHOD(DefaultPooledObject, startEvictionTest)
 {
+	zval *ret;
+	ret = zend_read_property(default_pooled_object_ce, getThis(), "state", strlen("state"), 0 TSRMLS_DC);
 
+	if (Z_LVAL_P(ret) == pooled_object_state_idle) {
+		zend_update_property_long(default_pooled_object_ce, getThis(), "state", strlen("state"), pooled_object_state_eviction TSRMLS_DC);
+		RETURN_TRUE;
+	} else {
+		RETURN_FALSE;
+	}
 }
-/*
-    @Override
-    public synchronized boolean startEvictionTest() {
-        if (state == PooledObjectState.IDLE) {
-            state = PooledObjectState.EVICTION;
-            return true;
-        }
 
-        return false;
-    }
-    */
 
+//TODO synchronized
+//TODO idleQueue
 PHP_METHOD(DefaultPooledObject, endEvictionTest)
+{
+	zval *ret;
+	ret = zend_read_property(default_pooled_object_ce, getThis(), "state", strlen("state"), 0 TSRMLS_DC);
+
+	if (Z_LVAL_P(ret) == pooled_object_state_eviction) {
+		zend_update_property_long(default_pooled_object_ce, getThis(), "state", strlen("state"), pooled_object_state_idle TSRMLS_DC);
+		RETURN_TRUE;
+	} else if (Z_LVAL_P(ret) == pooled_object_state_eviction_return_to_head) {
+		zend_update_property_long(default_pooled_object_ce, getThis(), "state", strlen("state"), pooled_object_state_idle TSRMLS_DC);
+	}
+
+	RETURN_FALSE;
+}
+
+
+//TODO synchronized
+PHP_METHOD(DefaultPooledObject, allocate)
+{
+	zval *ret, *property_borrowed_count;
+	ret = zend_read_property(default_pooled_object_ce, getThis(), "state", strlen("state"), 0 TSRMLS_DC);
+
+	if (Z_LVAL_P(ret) == pooled_object_state_idle) {
+		zend_update_property_long(default_pooled_object_ce, getThis(), "state", strlen("state"), pooled_object_state_allocated TSRMLS_DC);
+
+		long time_mills = get_time_mills();
+		zend_update_property_long(default_pooled_object_ce, getThis(), "lastBorrowTime", strlen("lastBorrowTime"), time_mills TSRMLS_DC);
+		zend_update_property_long(default_pooled_object_ce, getThis(), "lastUseTime", strlen("lastUseTime"), time_mills TSRMLS_DC);
+
+		long borrowed_count;
+		property_borrowed_count = zend_read_property(default_pooled_object_ce, getThis(), "borrowedCount", strlen("borrowedCount"), 0 TSRMLS_DC);
+		borrowed_count = Z_LVAL_P(property_borrowed_count);
+		zend_update_property_long(default_pooled_object_ce, getThis(), "borrowedCount", strlen("borrowedCount"), borrowed_count TSRMLS_DC);
+
+		RETURN_TRUE;
+	} else if (Z_LVAL_P(ret) == pooled_object_state_eviction) {
+		zend_update_property_long(default_pooled_object_ce, getThis(), "state", strlen("state"), pooled_object_state_eviction_return_to_head TSRMLS_DC);
+		RETURN_FALSE;
+	}
+
+	RETURN_FALSE;
+}
+
+
+//TODO synchronized
+PHP_METHOD(DefaultPooledObject, deallocate)
+{
+	zval *ret;
+	ret = zend_read_property(default_pooled_object_ce, getThis(), "state", strlen("state"), 0 TSRMLS_DC);
+
+	if (Z_LVAL_P(ret) == pooled_object_state_allocated || Z_LVAL_P(ret) == pooled_object_state_returning) {
+		zend_update_property_long(default_pooled_object_ce, getThis(), "state", strlen("state"), pooled_object_state_idle TSRMLS_DC);
+
+		long time_mills = get_time_mills();
+		zend_update_property_long(default_pooled_object_ce, getThis(), "lastReturnTime", strlen("lastReturnTime"), time_mills TSRMLS_DC);
+
+		RETURN_TRUE;
+	}
+
+	RETURN_FALSE;
+}
+
+
+//TODO synchronized
+PHP_METHOD(DefaultPooledObject, invalidate)
+{
+	zend_update_property_long(default_pooled_object_ce, getThis(), "state", strlen("state"), pooled_object_state_invalid TSRMLS_DC);
+}
+
+
+
+PHP_METHOD(DefaultPooledObject, use1)
+{
+	zend_update_property_long(default_pooled_object_ce, getThis(), "lastUseTime", strlen("lastUseTime"), get_time_mills() TSRMLS_DC);
+}
+
+
+PHP_METHOD(DefaultPooledObject, printStackTrace)
 {
 
 }
-
-/*
-    @Override
-    public synchronized boolean endEvictionTest(
-            Deque<PooledObject<T>> idleQueue) {
-        if (state == PooledObjectState.EVICTION) {
-            state = PooledObjectState.IDLE;
-            return true;
-        } else if (state == PooledObjectState.EVICTION_RETURN_TO_HEAD) {
-            state = PooledObjectState.IDLE;
-            if (!idleQueue.offerFirst(this)) {
-                // TODO - Should never happen
-            }
-        }
-
-        return false;
-    }
-    */
-
-    PHP_METHOD(DefaultPooledObject, allocate)
-    {
-
-    }
-    /**
-     * Allocates the object.
-     *
-     * @return {@code true} if the original state was {@link PooledObjectState#IDLE IDLE}
-     */
-    /*
-    @Override
-    public synchronized boolean allocate() {
-        if (state == PooledObjectState.IDLE) {
-            state = PooledObjectState.ALLOCATED;
-            lastBorrowTime = System.currentTimeMillis();
-            lastUseTime = lastBorrowTime;
-            borrowedCount++;
-            if (logAbandoned) {
-                borrowedBy = new AbandonedObjectCreatedException();
-            }
-            return true;
-        } else if (state == PooledObjectState.EVICTION) {
-            // TODO Allocate anyway and ignore eviction test
-            state = PooledObjectState.EVICTION_RETURN_TO_HEAD;
-            return false;
-        }
-        // TODO if validating and testOnBorrow == true then pre-allocate for
-        // performance
-        return false;
-    }
-    */
-
-    PHP_METHOD(DefaultPooledObject, deallocate)
-    {
-
-    }
-    /**
-     * Deallocates the object and sets it {@link PooledObjectState#IDLE IDLE}
-     * if it is currently {@link PooledObjectState#ALLOCATED ALLOCATED}.
-     *
-     * @return {@code true} if the state was {@link PooledObjectState#ALLOCATED ALLOCATED}
-     */
-    /*
-    @Override
-    public synchronized boolean deallocate() {
-        if (state == PooledObjectState.ALLOCATED ||
-                state == PooledObjectState.RETURNING) {
-            state = PooledObjectState.IDLE;
-            lastReturnTime = System.currentTimeMillis();
-            borrowedBy = null;
-            return true;
-        }
-
-        return false;
-    }
-    */
-
-
-    PHP_METHOD(DefaultPooledObject, invalidate)
-    {
-
-    }
-    /**
-     * Sets the state to {@link PooledObjectState#INVALID INVALID}
-     */
-    /*
-    @Override
-    public synchronized void invalidate() {
-        state = PooledObjectState.INVALID;
-    }
-    */
-
-    PHP_METHOD(DefaultPooledObject, use)
-    {
-
-    }
-
-    /*
-    @Override
-    public void use() {
-        lastUseTime = System.currentTimeMillis();
-        usedBy = new Exception("The last code to use this object was:");
-    }
-    */
-
-
-    PHP_METHOD(DefaultPooledObject, printStackTrace)
-    {
-
-    }
     /*
     @Override
     public void printStackTrace(PrintWriter writer) {
@@ -490,60 +459,37 @@ PHP_METHOD(DefaultPooledObject, endEvictionTest)
     }
 */
 
-    PHP_METHOD(DefaultPooledObject, getState)
-    {
-
-    }
-    /**
-     * Returns the state of this object.
-     * @return state
-     */
-    /*
-    @Override
-    public synchronized PooledObjectState getState() {
-        return state;
-    }
-*/
-
-    PHP_METHOD(DefaultPooledObject, markAbandoned)
-    {
-
-    }
-    /**
-     * Marks the pooled object as abandoned.
-     */
-    /*
-    @Override
-    public synchronized void markAbandoned() {
-        state = PooledObjectState.ABANDONED;
-    }
-    */
+//TODO synchronized
+PHP_METHOD(DefaultPooledObject, getState)
+{
+	zval *ret;
+	ret = zend_read_property(default_pooled_object_ce, getThis(), "state", strlen("state"), 0 TSRMLS_DC);
+	RETURN_LONG(Z_LVAL_P(ret));
+}
 
 
-    PHP_METHOD(DefaultPooledObject, markReturning)
-    {
-
-    }
-    /**
-     * Marks the object as returning to the pool.
-     */
-    /*
-    @Override
-    public synchronized void markReturning() {
-        state = PooledObjectState.RETURNING;
-    }
-    */
+//TODO synchronized
+PHP_METHOD(DefaultPooledObject, markAbandoned)
+{
+	zend_update_property_long(default_pooled_object_ce, getThis(), "state", strlen("state"), pooled_object_state_abandoned TSRMLS_DC);
+}
 
 
-    PHP_METHOD(DefaultPooledObject, setLogAbandoned)
-    {
+//TODO synchronized
+PHP_METHOD(DefaultPooledObject, markReturning)
+{
+	zend_update_property_long(default_pooled_object_ce, getThis(), "state", strlen("state"), pooled_object_state_returning TSRMLS_DC);
+}
 
-    }
-    /*
-    @Override
-    public void setLogAbandoned(boolean logAbandoned) {
-        this.logAbandoned = logAbandoned;
-    }
-*/
+
+PHP_METHOD(DefaultPooledObject, setLogAbandoned)
+{
+	zend_bool log_abandoned;
+	long log_abandoned_long;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "b", &log_abandoned) == SUCCESS) {
+		log_abandoned_long = log_abandoned ? 1 : 0;
+		zend_update_property_bool(default_pooled_object_ce, getThis(), "logAbandoned", strlen("logAbandoned"), log_abandoned_long TSRMLS_DC);
+	}
+}
 
 
