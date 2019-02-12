@@ -119,7 +119,7 @@ PHP_METHOD(DefaultPooledObject, setLogAbandoned);
 
 
 zend_function_entry default_pooled_object_method[] = {
-		PHP_ME(DefaultPooledObject, __construct, NULL, ZEND_ACC_PUBLIC)
+		PHP_ME(DefaultPooledObject, __construct, NULL, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
 		PHP_ME(DefaultPooledObject, getObject, NULL, ZEND_ACC_PUBLIC)
 		PHP_ME(DefaultPooledObject, getCreateTime, NULL, ZEND_ACC_PUBLIC)
 		PHP_ME(DefaultPooledObject, getActiveTimeMillis, NULL, ZEND_ACC_PUBLIC)
